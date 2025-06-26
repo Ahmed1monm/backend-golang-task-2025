@@ -1,0 +1,71 @@
+package main
+
+import (
+	"context"
+	"backend-golang-task-2025/internal/api/middleware"
+	"backend-golang-task-2025/internal/api/routes"
+	"backend-golang-task-2025/internal/config"
+	"backend-golang-task-2025/internal/models"
+	"backend-golang-task-2025/pkg/logger"
+	"backend-golang-task-2025/pkg/utils"
+
+	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
+	"go.uber.org/zap"
+)
+
+func main() {
+	// Initialize logger
+	env := utils.GetEnv("ENV", "development")
+	logger.Init(env)
+	defer logger.Sync()
+
+	// Create background context for startup operations
+	ctx := context.Background()
+
+	// Initialize Echo instance
+	e := echo.New()
+
+	// Middleware
+	e.Use(echomiddleware.Recover())
+	e.Use(echomiddleware.CORS())
+	e.Use(middleware.TraceMiddleware())
+	e.Use(middleware.ErrorHandler)
+
+	// Initialize database
+	dbConfig := config.NewDBConfig()
+	db, err := dbConfig.Connect()
+	if err != nil {
+		logger.Fatal(ctx, "Failed to connect to database", zap.Error(err))
+	}
+
+	// Verify database connection
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Fatal(ctx, "Failed to get database instance", zap.Error(err))
+	}
+	defer sqlDB.Close()
+
+	// Auto-migrate database schemas
+	if err := models.AutoMigrate(db); err != nil {
+		logger.Fatal(ctx, "Failed to migrate database", zap.Error(err))
+	}
+
+	logger.Info(ctx, "Successfully connected to database and migrated schemas")
+
+	// Setup routes
+	routes.SetupRoutes(e)
+
+	// Health check route
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(200, map[string]string{"status": "healthy"})
+	})
+
+	// Start server
+	port := ":" + utils.GetEnv("PORT", "8080")
+	logger.Info(ctx, "Starting server", zap.String("port", port))
+
+	if err := e.Start(port); err != nil {
+		logger.Fatal(ctx, "Server failed to start", zap.Error(err))
+	}
+}
