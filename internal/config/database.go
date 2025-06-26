@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"backend-golang-task-2025/pkg/errors"
-	"backend-golang-task-2025/pkg/logger"
-	"backend-golang-task-2025/pkg/utils"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/errors"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/utils"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

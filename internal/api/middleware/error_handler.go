@@ -6,8 +6,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 
-	"backend-golang-task-2025/pkg/errors"
-	"backend-golang-task-2025/pkg/logger"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/errors"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
 )
 
 type ErrorResponse struct {

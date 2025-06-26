@@ -1,4 +1,4 @@
-module backend-golang-task-2025
+module github.com/Ahmed1monm/backend-golang-task-2025
 
 go 1.22.0
 

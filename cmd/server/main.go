@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"backend-golang-task-2025/internal/api/middleware"
-	"backend-golang-task-2025/internal/api/routes"
-	"backend-golang-task-2025/internal/config"
-	"backend-golang-task-2025/internal/models"
-	"backend-golang-task-2025/pkg/logger"
-	"backend-golang-task-2025/pkg/utils"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/middleware"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/routes"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/config"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/utils"
 
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"

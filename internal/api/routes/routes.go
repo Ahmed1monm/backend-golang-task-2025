@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"backend-golang-task-2025/internal/api/handlers"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/handlers"
 	"github.com/labstack/echo/v4"
 )
 
