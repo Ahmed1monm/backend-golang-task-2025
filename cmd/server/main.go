@@ -8,6 +8,7 @@ import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/utils"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/redis"
 
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
@@ -23,6 +24,12 @@ func main() {
 	// Create background context for startup operations
 	ctx := context.Background()
 
+	// Initialize Redis
+	if err := redis.InitRedis(ctx); err != nil {
+		logger.Fatal(ctx, "Failed to initialize Redis", zap.Error(err))
+	}
+	logger.Info(ctx, "Successfully connected to Redis")
+
 	// Initialize Echo instance
 	e := echo.New()
 
@@ -31,6 +38,7 @@ func main() {
 	e.Use(echomiddleware.CORS())
 	e.Use(middleware.TraceMiddleware())
 	e.Use(middleware.ErrorHandler)
+	e.Use(middleware.RateLimit(middleware.DefaultRateLimitConfig))
 
 	// Initialize database
 	dbConfig := config.NewDBConfig()
