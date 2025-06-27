@@ -2,14 +2,26 @@ package routes
 
 import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/handlers"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/service"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // SetupRoutes configures all API routes
-func SetupRoutes(e *echo.Echo) {
+func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	// Initialize handlers
-	userHandler := handlers.NewUserHandler()
-	productHandler := handlers.NewProductHandler()
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(db)
+	productRepo := repository.NewProductRepository(db)
+
+	// Initialize services
+	userService := service.NewUserService(userRepo)
+	productService := service.NewProductService(productRepo)
+
+	// Initialize handlers
+	userHandler := handlers.NewUserHandler(userService)
+	productHandler := handlers.NewProductHandler(productService)
 	orderHandler := handlers.NewOrderHandler()
 	adminHandler := handlers.NewAdminHandler()
 

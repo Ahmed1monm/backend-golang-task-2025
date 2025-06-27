@@ -62,7 +62,7 @@ func main() {
 	logger.Info(ctx, "Successfully connected to database and migrated schemas")
 
 	// Setup routes
-	routes.SetupRoutes(e)
+	routes.SetupRoutes(e, db)
 
 	// Health check route
 	e.GET("/health", func(c echo.Context) error {
