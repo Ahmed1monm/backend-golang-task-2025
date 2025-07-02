@@ -9,21 +9,35 @@ import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/errors"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type OrderService struct {
-	db            *gorm.DB
-	orderRepo     repository.OrderRepository
-	inventoryRepo repository.InventoryRepository
+	db              *gorm.DB
+	orderRepo       repository.OrderRepository
+	inventoryRepo   repository.InventoryRepository
+	productRepo     repository.ProductRepository
+	notificationSvc NotificationService
+	wsManager       *websocket.Manager
 }
 
-func NewOrderService(db *gorm.DB, orderRepo repository.OrderRepository, inventoryRepo repository.InventoryRepository) *OrderService {
+func NewOrderService(
+	db *gorm.DB,
+	orderRepo repository.OrderRepository,
+	inventoryRepo repository.InventoryRepository,
+	productRepo repository.ProductRepository,
+	notificationSvc NotificationService,
+	wsManager *websocket.Manager,
+) *OrderService {
 	return &OrderService{
-		db:            db,
-		orderRepo:     orderRepo,
-		inventoryRepo: inventoryRepo,
+		db:              db,
+		orderRepo:       orderRepo,
+		inventoryRepo:   inventoryRepo,
+		productRepo:     productRepo,
+		notificationSvc: notificationSvc,
+		wsManager:       wsManager,
 	}
 }
 
@@ -207,38 +221,64 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID uint, items []str
 			return
 		}
 
-		// Create notification asynchronously (non-blocking)
+		// Create notification and send WebSocket events asynchronously (non-blocking)
 		go func(orderID, userID uint) {
-			notification := &models.Notification{
-				UserID:  userID,
-				Type:    models.NotificationTypeOrder,
-				Title:   "Order Placed Successfully",
-				Message: fmt.Sprintf("Your order #%d has been placed and is being processed.", orderID),
+			// Send order creation notification
+			orderEvent := &websocket.Event{
+				Type: websocket.EventOrderCreated,
+				Payload: websocket.OrderEventPayload{
+					OrderID:     order.ID,
+					Status:      string(order.Status),
+					TotalAmount: order.TotalAmount,
+				},
 			}
-			// Use a separate transaction for notification
-			ntx := s.db.Begin()
-			if ntx.Error != nil {
-				logger.Error(ctx, "Failed to start notification transaction",
-					zap.Error(ntx.Error),
-					zap.Uint("order_id", orderID),
-					zap.Uint("user_id", userID))
-				return
-			}
-			defer ntx.Rollback()
 
-			if err := ntx.Create(notification).Error; err != nil {
-				logger.Error(ctx, "Failed to create notification",
+			if err := s.notificationSvc.CreateNotification(
+				ctx,
+				userID,
+				models.NotificationTypeOrder,
+				"Order Placed Successfully",
+				fmt.Sprintf("Your order #%d has been placed and is being processed.", orderID),
+				orderEvent,
+			); err != nil {
+				logger.Error(ctx, "Failed to create order notification",
 					zap.Error(err),
 					zap.Uint("order_id", orderID),
 					zap.Uint("user_id", userID))
-				return
 			}
 
-			if err := ntx.Commit().Error; err != nil {
-				logger.Error(ctx, "Failed to commit notification transaction",
-					zap.Error(err),
-					zap.Uint("order_id", orderID),
-					zap.Uint("user_id", userID))
+			// Send inventory update notification for each product
+			for _, item := range order.OrderItems {
+				product, err := s.productRepo.FindByID(ctx, item.ProductID)
+				if err != nil {
+					logger.Error(ctx, "Failed to get product for inventory notification",
+						zap.Error(err),
+						zap.Uint("product_id", item.ProductID))
+					continue
+				}
+
+				inventoryEvent := &websocket.Event{
+					Type: websocket.EventInventoryUpdated,
+					Payload: websocket.InventoryEventPayload{
+						ProductID: product.ID,
+						Quantity:  product.Quantity,
+						Name:      product.Name,
+					},
+				}
+
+				if err := s.notificationSvc.CreateNotification(
+					ctx,
+					userID,
+					models.NotificationTypeInventory,
+					"Inventory Update",
+					fmt.Sprintf("Current inventory for %s: %d units", product.Name, product.Quantity),
+					inventoryEvent,
+				); err != nil {
+					logger.Error(ctx, "Failed to create inventory notification",
+						zap.Error(err),
+						zap.Uint("product_id", item.ProductID),
+						zap.Uint("user_id", userID))
+				}
 			}
 		}(order.ID, userID)
 
@@ -383,11 +423,72 @@ func (s *OrderService) CancelOrder(ctx context.Context, orderID, userID uint) (*
 		)
 	}
 
-	// Update order status to cancelled
+	// Update order status
 	order.Status = models.OrderStatusCancelled
 	if err := s.orderRepo.Update(ctx, tx, order); err != nil {
-		return nil, fmt.Errorf("failed to update order: %w", err)
+		return nil, fmt.Errorf("failed to update order status: %w", err)
 	}
+
+	// Send order cancellation and inventory update notifications asynchronously
+	go func(orderID, userID uint) {
+		// Send order cancellation notification
+		orderEvent := &websocket.Event{
+			Type: websocket.EventOrderCancelled,
+			Payload: websocket.OrderEventPayload{
+				OrderID:     order.ID,
+				Status:      string(order.Status),
+				TotalAmount: order.TotalAmount,
+			},
+		}
+
+		if err := s.notificationSvc.CreateNotification(
+			ctx,
+			userID,
+			models.NotificationTypeOrder,
+			"Order Cancelled",
+			fmt.Sprintf("Your order #%d has been cancelled.", orderID),
+			orderEvent,
+		); err != nil {
+			logger.Error(ctx, "Failed to create order cancellation notification",
+				zap.Error(err),
+				zap.Uint("order_id", orderID),
+				zap.Uint("user_id", userID))
+		}
+
+		// Send inventory update notification for each product
+		for _, item := range order.OrderItems {
+			product, err := s.productRepo.FindByID(ctx, item.ProductID)
+			if err != nil {
+				logger.Error(ctx, "Failed to get product for inventory notification",
+					zap.Error(err),
+					zap.Uint("product_id", item.ProductID))
+				continue
+			}
+
+			inventoryEvent := &websocket.Event{
+				Type: websocket.EventInventoryUpdated,
+				Payload: websocket.InventoryEventPayload{
+					ProductID: product.ID,
+					Quantity:  product.Quantity,
+					Name:      product.Name,
+				},
+			}
+
+			if err := s.notificationSvc.CreateNotification(
+				ctx,
+				userID,
+				models.NotificationTypeInventory,
+				"Inventory Update",
+				fmt.Sprintf("Updated inventory for %s: %d units available", product.Name, product.Quantity),
+				inventoryEvent,
+			); err != nil {
+				logger.Error(ctx, "Failed to create inventory notification",
+					zap.Error(err),
+					zap.Uint("product_id", item.ProductID),
+					zap.Uint("user_id", userID))
+			}
+		}
+	}(order.ID, userID)
 
 	// Release reserved inventory for all order items
 	for _, item := range order.OrderItems {

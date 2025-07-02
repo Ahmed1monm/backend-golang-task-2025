@@ -9,6 +9,7 @@ import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/service"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/workers"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/websocket"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
@@ -21,6 +22,11 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	orderRepo := repository.NewOrderRepository(db)
 	inventoryRepo := repository.NewInventoryRepository(db)
 	reportRepo := repository.NewReportRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
+
+	// Initialize WebSocket manager
+	wsManager := websocket.NewManager()
+	go wsManager.Start()
 
 	// Initialize report worker
 	reportWorker := workers.NewReportWorker(db, reportRepo, orderRepo, userRepo, productRepo)
@@ -31,7 +37,8 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	productService := service.NewProductService(productRepo, orderRepo, inventoryRepo, db)
-	orderService := service.NewOrderService(db, orderRepo, inventoryRepo)
+	notificationService := service.NewNotificationService(db, notificationRepo, wsManager)
+	orderService := service.NewOrderService(db, orderRepo, inventoryRepo, productRepo, notificationService, wsManager)
 	reportService := service.NewReportService(reportRepo)
 
 	// Initialize handlers
@@ -39,6 +46,7 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	productHandler := handlers.NewProductHandler(productService)
 	orderHandler := handlers.NewOrderHandler(orderService)
 	adminHandler := handlers.NewAdminHandler(orderService, reportService)
+	wsHandler := handlers.NewWebSocketHandler(wsManager)
 
 	// API v1 group
 	v1 := e.Group("/api/v1")
@@ -64,6 +72,9 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 	orders.GET("/:id", orderHandler.GetOrder, middleware.JWTAuthentication())
 	orders.PUT("/:id/cancel", orderHandler.CancelOrder, middleware.JWTAuthentication())
 	orders.GET("/:id/status", orderHandler.GetOrderStatus, middleware.JWTAuthentication())
+
+	// WebSocket route
+	v1.GET("/ws", wsHandler.HandleWebSocket, middleware.JWTAuthentication())
 
 	// Admin routes - protected with JWT auth and admin role requirement
 	admin := v1.Group("/admin", middleware.JWTAuthentication(), middleware.RequireRoles(models.RoleAdmin))
