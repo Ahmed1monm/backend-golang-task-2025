@@ -8,6 +8,8 @@ import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/errors"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -104,13 +106,33 @@ func isValidStatusTransition(current, new models.OrderStatus) bool {
 	return false
 }
 
+type orderResult struct {
+	Order   *models.Order
+	Error   error
+	Success bool
+}
+
 func (s *OrderService) CreateOrder(ctx context.Context, userID uint, items []struct {
 	ProductID uint
 	Quantity  int
 }) (*models.Order, error) {
-	var order models.Order
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		order = models.Order{
+	// Create result channel with buffer to avoid goroutine leak
+	resultChan := make(chan orderResult, 1)
+
+	// Process order in goroutine
+	go func() {
+		defer close(resultChan)
+
+		// Start transaction
+		tx := s.db.Begin()
+		if tx.Error != nil {
+			resultChan <- orderResult{Error: tx.Error}
+			return
+		}
+		defer tx.Rollback()
+
+		// Create order with pending status
+		order := &models.Order{
 			UserID: userID,
 			Status: models.OrderStatusPending,
 		}
@@ -120,47 +142,52 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID uint, items []str
 		orderItems := make([]models.OrderItem, 0, len(items))
 
 		for _, item := range items {
-			// Get product
+			// Get product with lock
 			product, err := s.orderRepo.GetProductByID(ctx, tx, item.ProductID)
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
-					return errors.NewValidationError(
+					resultChan <- orderResult{Error: errors.NewValidationError(
 						fmt.Sprintf("Product with ID %d not found", item.ProductID),
 						map[string]string{"product_id": "product not found"},
 						400,
-					)
+					)}
+					return
 				}
-				return err
+				resultChan <- orderResult{Error: err}
+				return
 			}
 
 			// Get and lock inventory
 			inventory, err := s.inventoryRepo.GetForUpdate(ctx, tx, item.ProductID)
 			if err != nil {
-				return err
+				resultChan <- orderResult{Error: err}
+				return
 			}
 
-			// Check if enough inventory is available
-			if inventory.Quantity-inventory.Reserved < item.Quantity {
-				return errors.NewValidationError(
-					fmt.Sprintf("Insufficient inventory for product %d", item.ProductID),
-					map[string]string{"quantity": "insufficient inventory"},
+			// Check if enough stock
+			if inventory.Quantity < item.Quantity {
+				resultChan <- orderResult{Error: errors.NewValidationError(
+					fmt.Sprintf("Insufficient stock for product %d", item.ProductID),
+					map[string]string{"quantity": "insufficient stock"},
 					400,
-				)
+				)}
+				return
 			}
 
-			// Reserve the inventory
+			// Update inventory
+			inventory.Quantity -= item.Quantity
 			inventory.Reserved += item.Quantity
 			if err := s.inventoryRepo.Update(ctx, tx, inventory); err != nil {
-				return err
+				resultChan <- orderResult{Error: err}
+				return
 			}
 
 			// Create order item
-			orderItem := models.OrderItem{
+			orderItems = append(orderItems, models.OrderItem{
 				ProductID: item.ProductID,
 				Quantity:  item.Quantity,
-				Price:    product.Price,
-			}
-			orderItems = append(orderItems, orderItem)
+				Price:     product.Price,
+			})
 			totalAmount += float64(item.Quantity) * product.Price
 		}
 
@@ -168,18 +195,72 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID uint, items []str
 		order.OrderItems = orderItems
 
 		// Create the order
-		if err := s.orderRepo.CreateOrder(ctx, tx, &order); err != nil {
-			return err
+		if err := s.orderRepo.CreateOrder(ctx, tx, order); err != nil {
+			resultChan <- orderResult{Error: err}
+			return
 		}
 
-		return nil
-	})
+		// Process mock payment (simulated success)
+		order.Status = models.OrderStatusProcessing
+		if err := s.orderRepo.Update(ctx, tx, order); err != nil {
+			resultChan <- orderResult{Error: err}
+			return
+		}
 
-	if err != nil {
-		return nil, err
+		// Create notification asynchronously (non-blocking)
+		go func(orderID, userID uint) {
+			notification := &models.Notification{
+				UserID:  userID,
+				Type:    models.NotificationTypeOrder,
+				Title:   "Order Placed Successfully",
+				Message: fmt.Sprintf("Your order #%d has been placed and is being processed.", orderID),
+			}
+			// Use a separate transaction for notification
+			ntx := s.db.Begin()
+			if ntx.Error != nil {
+				logger.Error(ctx, "Failed to start notification transaction",
+					zap.Error(ntx.Error),
+					zap.Uint("order_id", orderID),
+					zap.Uint("user_id", userID))
+				return
+			}
+			defer ntx.Rollback()
+
+			if err := ntx.Create(notification).Error; err != nil {
+				logger.Error(ctx, "Failed to create notification",
+					zap.Error(err),
+					zap.Uint("order_id", orderID),
+					zap.Uint("user_id", userID))
+				return
+			}
+
+			if err := ntx.Commit().Error; err != nil {
+				logger.Error(ctx, "Failed to commit notification transaction",
+					zap.Error(err),
+					zap.Uint("order_id", orderID),
+					zap.Uint("user_id", userID))
+			}
+		}(order.ID, userID)
+
+		// Commit main transaction
+		if err := tx.Commit().Error; err != nil {
+			resultChan <- orderResult{Error: err}
+			return
+		}
+
+		resultChan <- orderResult{Order: order, Success: true}
+	}()
+
+	// Wait for result or context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-resultChan:
+		if result.Error != nil {
+			return nil, result.Error
+		}
+		return result.Order, nil
 	}
-
-	return &order, nil
 }
 
 func (s *OrderService) GetOrderByID(ctx context.Context, orderID uint) (*models.Order, error) {
