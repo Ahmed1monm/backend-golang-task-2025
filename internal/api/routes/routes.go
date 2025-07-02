@@ -1,34 +1,44 @@
 package routes
 
 import (
+	"log"
+
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/handlers"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/middleware"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/service"
+	"github.com/Ahmed1monm/backend-golang-task-2025/internal/workers"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 // SetupRoutes configures all API routes
 func SetupRoutes(e *echo.Echo, db *gorm.DB) {
-	// Initialize handlers
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
 	inventoryRepo := repository.NewInventoryRepository(db)
+	reportRepo := repository.NewReportRepository(db)
+
+	// Initialize report worker
+	reportWorker := workers.NewReportWorker(db, reportRepo, orderRepo, userRepo, productRepo)
+	if err := reportWorker.Start(); err != nil {
+		log.Printf("Failed to start report worker: %v", err)
+	}
 
 	// Initialize services
 	userService := service.NewUserService(userRepo)
 	productService := service.NewProductService(productRepo, orderRepo, inventoryRepo, db)
 	orderService := service.NewOrderService(db, orderRepo, inventoryRepo)
+	reportService := service.NewReportService(reportRepo)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	productHandler := handlers.NewProductHandler(productService)
 	orderHandler := handlers.NewOrderHandler(orderService)
-	adminHandler := handlers.NewAdminHandler()
+	adminHandler := handlers.NewAdminHandler(orderService, reportService)
 
 	// API v1 group
 	v1 := e.Group("/api/v1")

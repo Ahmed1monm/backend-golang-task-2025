@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
 	"gorm.io/gorm"
@@ -14,6 +15,8 @@ type ProductRepository interface {
 	List(ctx context.Context, offset, limit int) ([]models.Product, int64, error)
 	GetInventory(ctx context.Context, productID uint) (*models.Inventory, error)
 	Update(ctx context.Context, product *models.Product, inventory *models.Inventory) error
+	GetTopProducts(ctx context.Context, tx *gorm.DB, date time.Time, limit int) ([]models.TopProduct, error)
+	GetLowStockProducts(ctx context.Context, tx *gorm.DB) ([]models.LowStockAlert, error)
 }
 
 type productRepository struct {
@@ -103,4 +106,44 @@ func (r *productRepository) Update(ctx context.Context, product *models.Product,
 
 		return nil
 	})
+}
+
+func (r *productRepository) GetTopProducts(ctx context.Context, tx *gorm.DB, date time.Time, limit int) ([]models.TopProduct, error) {
+	var products []models.TopProduct
+
+	err := tx.WithContext(ctx).
+		Table("order_items").
+		Select(
+			"order_items.product_id,"+
+				"products.name,"+
+				"SUM(order_items.quantity) as total_quantity,"+
+				"SUM(order_items.quantity * order_items.price) as total_revenue",
+		).
+		Joins("JOIN orders ON orders.id = order_items.order_id").
+		Joins("JOIN products ON products.id = order_items.product_id").
+		Where("DATE(orders.created_at) = DATE(?)", date).
+		Group("order_items.product_id, products.name").
+		Order("total_quantity DESC").
+		Limit(limit).
+		Scan(&products).Error
+
+	return products, err
+}
+
+func (r *productRepository) GetLowStockProducts(ctx context.Context, tx *gorm.DB) ([]models.LowStockAlert, error) {
+	var alerts []models.LowStockAlert
+
+	err := tx.WithContext(ctx).
+		Table("inventories").
+		Select(
+			"inventories.product_id,"+
+				"products.name,"+
+				"inventories.quantity as current_stock,"+
+				"products.reorder_threshold",
+		).
+		Joins("JOIN products ON products.id = inventories.product_id").
+		Where("inventories.quantity <= products.reorder_threshold").
+		Scan(&alerts).Error
+
+	return alerts, err
 }

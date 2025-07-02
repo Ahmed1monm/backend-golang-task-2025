@@ -182,10 +182,81 @@ func (h *OrderHandler) GetOrder(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+// CancelOrder godoc
+// @Summary Cancel an order
+// @Description Cancel an order if it's in a cancellable state and belongs to the authenticated user
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param id path int true "Order ID"
+// @Success 200 {object} dto.OrderResponse
+// @Failure 400 {object} errors.ErrorResponse
+// @Failure 401 {object} errors.ErrorResponse
+// @Failure 403 {object} errors.ErrorResponse
+// @Failure 404 {object} errors.ErrorResponse
+// @Failure 500 {object} errors.ErrorResponse
+// @Router /orders/{id}/cancel [put]
+// @Security BearerAuth
 func (h *OrderHandler) CancelOrder(c echo.Context) error {
-	return errors.NewBusinessError("Order cannot be cancelled", errors.ErrCodeInvalidOrderStatus, http.StatusUnprocessableEntity)
+	// Get order ID from path
+	orderID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		return errors.NewValidationError(
+			"Invalid order ID",
+			map[string]string{"id": "must be a valid number"},
+			http.StatusBadRequest,
+		)
+	}
+
+	// Get user ID from context
+	userID := c.Get("user_id").(uint)
+
+	// Cancel order
+	order, err := h.orderService.CancelOrder(c.Request().Context(), uint(orderID), userID)
+	if err != nil {
+		return err // Service errors are already properly formatted
+	}
+
+	// Convert to response DTO
+	resp := dto.OrderToResponse(order)
+	return c.JSON(http.StatusOK, resp)
 }
 
+// GetOrderStatus godoc
+// @Summary Get order status
+// @Description Get the current status of an order
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param id path int true "Order ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} errors.ErrorResponse
+// @Failure 401 {object} errors.ErrorResponse
+// @Failure 403 {object} errors.ErrorResponse
+// @Failure 404 {object} errors.ErrorResponse
+// @Failure 500 {object} errors.ErrorResponse
+// @Router /orders/{id}/status [get]
+// @Security BearerAuth
 func (h *OrderHandler) GetOrderStatus(c echo.Context) error {
-	return errors.NewServerError("Failed to retrieve order status", nil, http.StatusInternalServerError)
+	// Get order ID from path
+	orderID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		return errors.NewValidationError(
+			"Invalid order ID",
+			map[string]string{"id": "must be a valid number"},
+			http.StatusBadRequest,
+		)
+	}
+
+	// Get user ID from context
+	userID := c.Get("user_id").(uint)
+
+	// Get order status
+	status, err := h.orderService.GetOrderStatus(c.Request().Context(), uint(orderID), userID)
+	if err != nil {
+		return err // Service errors are already properly formatted
+	}
+
+	// Return status
+	return c.JSON(http.StatusOK, map[string]string{"status": string(status)})
 }

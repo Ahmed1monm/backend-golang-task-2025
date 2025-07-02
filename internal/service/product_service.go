@@ -21,8 +21,8 @@ type ProductService interface {
 }
 
 type productService struct {
-	productRepo    repository.ProductRepository
-	orderRepo      repository.OrderRepository
+	productRepo   repository.ProductRepository
+	orderRepo     repository.OrderRepository
 	inventoryRepo repository.InventoryRepository
 	db            *gorm.DB
 }
@@ -81,8 +81,8 @@ func (s *productService) ListProducts(ctx context.Context, page, limit int) (*dt
 
 func NewProductService(repo repository.ProductRepository, orderRepo repository.OrderRepository, inventoryRepo repository.InventoryRepository, db *gorm.DB) ProductService {
 	return &productService{
-		productRepo:    repo,
-		orderRepo:      orderRepo,
+		productRepo:   repo,
+		orderRepo:     orderRepo,
 		inventoryRepo: inventoryRepo,
 		db:            db,
 	}

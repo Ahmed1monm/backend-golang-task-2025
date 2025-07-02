@@ -29,3 +29,11 @@ type UserProfileResponse struct {
 	Role      models.UserRole `json:"role"`
 	Active    bool           `json:"active"`
 }
+
+// UpdateUserProfileRequest represents the request body for updating a user profile
+type UpdateUserProfileRequest struct {
+	Email     *string `json:"email" validate:"omitempty,email"`
+	Password  *string `json:"password" validate:"omitempty,min=8,max=100"`
+	FirstName *string `json:"first_name" validate:"omitempty,min=2,max=50"`
+	LastName  *string `json:"last_name" validate:"omitempty,min=2,max=50"`
+}

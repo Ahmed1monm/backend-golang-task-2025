@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
@@ -22,6 +23,85 @@ func NewOrderService(db *gorm.DB, orderRepo repository.OrderRepository, inventor
 		orderRepo:     orderRepo,
 		inventoryRepo: inventoryRepo,
 	}
+}
+
+// ListAllOrders returns a paginated list of all orders in the system
+func (s *OrderService) ListAllOrders(ctx context.Context, page, perPage int) ([]models.Order, int64, error) {
+	// Calculate offset
+	offset := (page - 1) * perPage
+
+	// Get total count
+	total, err := s.orderRepo.CountOrders(ctx, s.db)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count orders: %w", err)
+	}
+
+	// Get paginated orders with their items and user
+	orders, err := s.orderRepo.ListOrders(ctx, s.db, offset, perPage)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to fetch orders: %w", err)
+	}
+
+	return orders, total, nil
+}
+
+// UpdateOrderStatus updates the status of an order
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, orderID uint, status models.OrderStatus) (*models.Order, error) {
+	// Start transaction
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", tx.Error)
+	}
+	defer tx.Rollback()
+
+	// Get order
+	order, err := s.orderRepo.GetOrderByID(ctx, tx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+
+	// Validate status transition
+	if !isValidStatusTransition(order.Status, status) {
+		return nil, errors.NewValidationError(
+			"Invalid status transition",
+			map[string]string{"status": fmt.Sprintf("cannot transition from %s to %s", order.Status, status)},
+			http.StatusBadRequest,
+		)
+	}
+
+	// Update status
+	order.Status = status
+	if err := s.orderRepo.Update(ctx, tx, order); err != nil {
+		return nil, fmt.Errorf("failed to update order: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return order, nil
+}
+
+// isValidStatusTransition checks if the status transition is valid
+func isValidStatusTransition(current, new models.OrderStatus) bool {
+	// Define valid transitions
+	validTransitions := map[models.OrderStatus][]models.OrderStatus{
+		models.OrderStatusPending:    {models.OrderStatusProcessing, models.OrderStatusCancelled},
+		models.OrderStatusProcessing: {models.OrderStatusShipped, models.OrderStatusCancelled},
+		models.OrderStatusShipped:    {models.OrderStatusDelivered},
+		models.OrderStatusDelivered:  {},
+		models.OrderStatusCancelled:  {},
+	}
+
+	// Check if transition is valid
+	for _, validStatus := range validTransitions[current] {
+		if validStatus == new {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, userID uint, items []struct {
@@ -143,4 +223,110 @@ func (s *OrderService) ListOrdersByUserID(ctx context.Context, userID uint) ([]m
 	}
 
 	return orders, nil
+}
+
+// GetOrderStatus returns the current status of an order and verifies the user has access to it
+func (s *OrderService) GetOrderStatus(ctx context.Context, orderID, userID uint) (models.OrderStatus, error) {
+	var status models.OrderStatus
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// Get order with minimal fields needed
+		order, err := s.orderRepo.GetOrderByID(ctx, tx, orderID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return errors.NewBusinessError(
+					"Order not found",
+					errors.ErrCodeResourceNotFound,
+					http.StatusNotFound,
+				)
+			}
+			return fmt.Errorf("failed to get order: %w", err)
+		}
+
+		// Verify order belongs to user
+		if order.UserID != userID {
+			return errors.NewBusinessError(
+				"Order does not belong to user",
+				"UNAUTHORIZED_ACCESS",
+				http.StatusForbidden,
+			)
+		}
+
+		status = order.Status
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return status, nil
+}
+
+// CancelOrder cancels an order if it's in a cancellable state and belongs to the given user
+func (s *OrderService) CancelOrder(ctx context.Context, orderID, userID uint) (*models.Order, error) {
+	// Start transaction
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", tx.Error)
+	}
+	defer tx.Rollback()
+
+	// Get order
+	order, err := s.orderRepo.GetOrderByID(ctx, tx, orderID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NewBusinessError(
+				"Order not found",
+				errors.ErrCodeResourceNotFound,
+				http.StatusNotFound,
+			)
+		}
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+
+	// Verify order belongs to user
+	if order.UserID != userID {
+		return nil, errors.NewBusinessError(
+			"Order does not belong to user",
+			"UNAUTHORIZED_ACCESS",
+			http.StatusForbidden,
+		)
+	}
+
+	// Check if order can be cancelled
+	if !isValidStatusTransition(order.Status, models.OrderStatusCancelled) {
+		return nil, errors.NewBusinessError(
+			"Order cannot be cancelled",
+			"INVALID_STATUS_TRANSITION",
+			http.StatusBadRequest,
+		)
+	}
+
+	// Update order status to cancelled
+	order.Status = models.OrderStatusCancelled
+	if err := s.orderRepo.Update(ctx, tx, order); err != nil {
+		return nil, fmt.Errorf("failed to update order: %w", err)
+	}
+
+	// Release reserved inventory for all order items
+	for _, item := range order.OrderItems {
+		// Get and lock inventory
+		inventory, err := s.inventoryRepo.GetForUpdate(ctx, tx, item.ProductID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get inventory: %w", err)
+		}
+
+		// Release reserved quantity
+		inventory.Reserved -= item.Quantity
+		if err := s.inventoryRepo.Update(ctx, tx, inventory); err != nil {
+			return nil, fmt.Errorf("failed to update inventory: %w", err)
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return order, nil
 }
