@@ -14,6 +14,13 @@ type CreateProductRequest struct {
 	Quantity    int     `json:"quantity" validate:"required,gte=0"`
 }
 
+type UpdateProductRequest struct {
+	Name        *string  `json:"name,omitempty" validate:"omitempty,min=3,max=100"`
+	Description *string  `json:"description,omitempty" validate:"omitempty,min=10,max=1000"`
+	Price       *float64 `json:"price,omitempty" validate:"omitempty,gt=0"`
+	Quantity    *int     `json:"quantity,omitempty" validate:"omitempty,gte=0"`
+}
+
 // ProductResponse represents a product in responses
 type ProductResponse struct {
 	ID          uint    `json:"id"`
@@ -23,6 +30,12 @@ type ProductResponse struct {
 	Quantity    int     `json:"quantity"`
 	CreatedAt   string  `json:"created_at"`
 	UpdatedAt   string  `json:"updated_at"`
+}
+
+type InventoryResponse struct {
+	ProductID uint `json:"product_id"`
+	Quantity  int  `json:"quantity"`
+	Reserved  int  `json:"reserved"`
 }
 
 // ListProductsResponse represents the response for listing products

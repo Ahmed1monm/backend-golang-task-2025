@@ -12,6 +12,8 @@ type ProductRepository interface {
 	Create(ctx context.Context, product *models.Product, inventory *models.Inventory) error
 	FindByID(ctx context.Context, id uint) (*models.Product, error)
 	List(ctx context.Context, offset, limit int) ([]models.Product, int64, error)
+	GetInventory(ctx context.Context, productID uint) (*models.Inventory, error)
+	Update(ctx context.Context, product *models.Product, inventory *models.Inventory) error
 }
 
 type productRepository struct {
@@ -52,6 +54,18 @@ func NewProductRepository(db *gorm.DB) ProductRepository {
 	return &productRepository{db: db}
 }
 
+func (r *productRepository) GetInventory(ctx context.Context, productID uint) (*models.Inventory, error) {
+	var inventory models.Inventory
+	result := r.db.WithContext(ctx).Where("product_id = ?", productID).First(&inventory)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &inventory, nil
+}
+
 func (r *productRepository) Create(ctx context.Context, product *models.Product, inventory *models.Inventory) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Create product
@@ -63,6 +77,28 @@ func (r *productRepository) Create(ctx context.Context, product *models.Product,
 		inventory.ProductID = product.ID
 		if err := tx.Create(inventory).Error; err != nil {
 			return err
+		}
+
+		return nil
+	})
+}
+
+func (r *productRepository) Update(ctx context.Context, product *models.Product, inventory *models.Inventory) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Update product if provided
+		if product != nil {
+			if err := tx.Model(product).Updates(product).Error; err != nil {
+				return err
+			}
+		}
+
+		// Update inventory if provided
+		if inventory != nil {
+			if err := tx.Model(&models.Inventory{}).Where("product_id = ?", product.ID).Updates(map[string]interface{}{
+				"quantity": inventory.Quantity,
+			}).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil

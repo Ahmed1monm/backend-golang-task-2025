@@ -91,9 +91,52 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 }
 
 func (h *ProductHandler) UpdateProduct(c echo.Context) error {
-	return echo.NewHTTPError(http.StatusNotImplemented, "Not implemented")
+	// Parse product ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid product ID")
+	}
+
+	// Parse request body
+	req := new(dto.UpdateProductRequest)
+	if err := c.Bind(req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
+
+	// Validate request
+	if errs := validator.Validate(req); len(errs) > 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{"errors": errs})
+	}
+
+	// Update product
+	resp, err := h.productService.UpdateProduct(c.Request().Context(), uint(id), req)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to update product")
+	}
+
+	if resp == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "Product not found")
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 func (h *ProductHandler) CheckInventory(c echo.Context) error {
-	return echo.NewHTTPError(http.StatusNotImplemented, "Not implemented")
+	// Parse product ID
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid product ID")
+	}
+
+	// Get inventory from service
+	resp, err := h.productService.GetInventory(c.Request().Context(), uint(id))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get product inventory")
+	}
+
+	if resp == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "Product or inventory not found")
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }

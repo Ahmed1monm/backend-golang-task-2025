@@ -54,6 +54,24 @@ func NewBusinessError(message string, errorCode string, statusCode int) *Busines
 	}
 }
 
+// AuthorizationError represents authorization related errors
+type AuthorizationError struct {
+	AppError
+	Err error `json:"error,omitempty"`
+}
+
+// NewAuthorizationError creates a new authorization error
+func NewAuthorizationError(message string, err error, statusCode int) *AuthorizationError {
+	return &AuthorizationError{
+		AppError: AppError{
+			Message:    message,
+			StatusCode: statusCode,
+			ErrorCode:  "AUTHORIZATION_ERROR",
+		},
+		Err: err,
+	}
+}
+
 // ServerError represents internal server errors
 type ServerError struct {
 	AppError
