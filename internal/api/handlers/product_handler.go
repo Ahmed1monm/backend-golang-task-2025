@@ -1,21 +1,29 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/dto"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/service"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/redis"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/validator"
 	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 )
 
 type ProductHandler struct {
 	productService service.ProductService
+	redisService   redis.Service
 }
 
-func NewProductHandler(productService service.ProductService) *ProductHandler {
-	return &ProductHandler{productService: productService}
+func NewProductHandler(productService service.ProductService, redisService redis.Service) *ProductHandler {
+	return &ProductHandler{
+		productService: productService,
+		redisService:   redisService,
+	}
 }
 
 func (h *ProductHandler) ListProducts(c echo.Context) error {
@@ -117,7 +125,14 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 	if resp == nil {
 		return echo.NewHTTPError(http.StatusNotFound, "Product not found")
 	}
-
+	// Clear cache asynchronously
+	go func() {
+		ctx := context.Background()
+		// Invalidate all product-related caches using pattern
+		if err := h.redisService.InvalidatePattern(ctx, "/api/v1/products*"); err != nil {
+			logger.Error(ctx, "Failed to invalidate products cache", zap.Error(err))
+		}
+	}()
 	return c.JSON(http.StatusOK, resp)
 }
 

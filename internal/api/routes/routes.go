@@ -9,13 +9,14 @@ import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/repository"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/service"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/workers"
+	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/redis"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/websocket"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 // SetupRoutes configures all API routes
-func SetupRoutes(e *echo.Echo, db *gorm.DB) {
+func SetupRoutes(e *echo.Echo, db *gorm.DB, redisService redis.Service) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
@@ -43,7 +44,7 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
-	productHandler := handlers.NewProductHandler(productService)
+	productHandler := handlers.NewProductHandler(productService, redisService)
 	orderHandler := handlers.NewOrderHandler(orderService)
 	adminHandler := handlers.NewAdminHandler(orderService, reportService)
 	wsHandler := handlers.NewWebSocketHandler(wsManager)
@@ -59,8 +60,8 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB) {
 
 	// Product routes
 	products := v1.Group("/products")
-	products.GET("", productHandler.ListProducts)
-	products.GET("/:id", productHandler.GetProduct)
+	products.GET("", echo.HandlerFunc(middleware.WithCache(redisService, productHandler.ListProducts)))
+	products.GET("/:id", echo.HandlerFunc(middleware.WithCache(redisService, productHandler.GetProduct)))
 	products.POST("", productHandler.CreateProduct, middleware.JWTAuthentication())
 	products.PUT("/:id", productHandler.UpdateProduct, middleware.JWTAuthentication())
 	products.GET("/:id/inventory", productHandler.CheckInventory, middleware.JWTAuthentication())

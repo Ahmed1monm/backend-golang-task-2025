@@ -28,6 +28,9 @@ func main() {
 	if err := redis.InitRedis(ctx); err != nil {
 		logger.Fatal(ctx, "Failed to initialize Redis", zap.Error(err))
 	}
+	redisClient := redis.GetClient()
+	redisRepo := redis.NewRepository(redisClient)
+	redisService := redis.NewService(redisRepo)
 	logger.Info(ctx, "Successfully connected to Redis")
 
 	// Initialize Echo instance
@@ -62,7 +65,7 @@ func main() {
 	logger.Info(ctx, "Successfully connected to database and migrated schemas")
 
 	// Setup routes
-	routes.SetupRoutes(e, db)
+	routes.SetupRoutes(e, db, redisService)
 
 	// Health check route
 	e.GET("/health", func(c echo.Context) error {
