@@ -1,13 +1,13 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
 
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/errors"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/logger"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/zap"
 )
 
 type ErrorResponse struct {
@@ -50,6 +50,18 @@ func ErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 				Message:    e.Message,
 				ErrorCode:  e.ErrorCode,
 				StatusCode: e.StatusCode,
+			})
+
+		case *echo.HTTPError:
+			if e.Code == http.StatusNotFound {
+				logger.Info(ctx, "Route not found", zap.Error(err))
+			} else {
+				logger.Error(ctx, "HTTP error", zap.Error(err))
+			}
+			return c.JSON(e.Code, ErrorResponse{
+				Message:    e.Message.(string),
+				ErrorCode:  fmt.Sprintf("%d", e.Code),
+				StatusCode: e.Code,
 			})
 
 		default:

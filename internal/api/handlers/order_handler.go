@@ -20,6 +20,19 @@ func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
 	return &OrderHandler{orderService: orderService}
 }
 
+// CreateOrder godoc
+// @Summary Create a new order
+// @Description Create a new order with the specified items
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateOrderRequest true "Order creation details"
+// @Success 201 {object} dto.OrderResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /orders [post]
+// @Security BearerAuth
 func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -88,6 +101,17 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	return c.JSON(http.StatusCreated, response)
 }
 
+// ListOrders godoc
+// @Summary List user's orders
+// @Description Get a list of all orders for the authenticated user
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.OrderResponse
+// @Failure 401 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /orders [get]
+// @Security BearerAuth
 func (h *OrderHandler) ListOrders(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -131,6 +155,20 @@ func (h *OrderHandler) ListOrders(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+// GetOrder godoc
+// @Summary Get order by ID
+// @Description Get detailed information about a specific order
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Param id path int true "Order ID"
+// @Success 200 {object} dto.OrderResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /orders/{id} [get]
+// @Security BearerAuth
 func (h *OrderHandler) GetOrder(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -190,11 +228,10 @@ func (h *OrderHandler) GetOrder(c echo.Context) error {
 // @Produce json
 // @Param id path int true "Order ID"
 // @Success 200 {object} dto.OrderResponse
-// @Failure 400 {object} errors.ErrorResponse
-// @Failure 401 {object} errors.ErrorResponse
-// @Failure 403 {object} errors.ErrorResponse
-// @Failure 404 {object} errors.ErrorResponse
-// @Failure 500 {object} errors.ErrorResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
 // @Router /orders/{id}/cancel [put]
 // @Security BearerAuth
 func (h *OrderHandler) CancelOrder(c echo.Context) error {
@@ -230,11 +267,10 @@ func (h *OrderHandler) CancelOrder(c echo.Context) error {
 // @Produce json
 // @Param id path int true "Order ID"
 // @Success 200 {object} map[string]string
-// @Failure 400 {object} errors.ErrorResponse
-// @Failure 401 {object} errors.ErrorResponse
-// @Failure 403 {object} errors.ErrorResponse
-// @Failure 404 {object} errors.ErrorResponse
-// @Failure 500 {object} errors.ErrorResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
 // @Router /orders/{id}/status [get]
 // @Security BearerAuth
 func (h *OrderHandler) GetOrderStatus(c echo.Context) error {

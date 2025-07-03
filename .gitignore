@@ -1,6 +1,7 @@
 # Ignore Go build and test artifacts
 _gopath/pkg/
 .bin/
+bin/
 _GOPATH/pkg/
 vendor/
 

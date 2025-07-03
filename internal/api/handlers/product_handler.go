@@ -26,6 +26,18 @@ func NewProductHandler(productService service.ProductService, redisService redis
 	}
 }
 
+// ListProducts godoc
+// @Summary List all products
+// @Description Get a paginated list of products
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number (default: 1)"
+// @Param limit query int false "Items per page (default: 10)"
+// @Success 200 {object} dto.PaginatedProductsResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /products [get]
 func (h *ProductHandler) ListProducts(c echo.Context) error {
 	// Parse pagination query
 	var query dto.PaginationQuery
@@ -55,6 +67,18 @@ func (h *ProductHandler) ListProducts(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// GetProduct godoc
+// @Summary Get product by ID
+// @Description Get detailed information about a specific product
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} dto.ProductResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 404 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /products/{id} [get]
 func (h *ProductHandler) GetProduct(c echo.Context) error {
 	// Parse product ID
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -75,6 +99,19 @@ func (h *ProductHandler) GetProduct(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// CreateProduct godoc
+// @Summary Create a new product
+// @Description Create a new product in the system
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateProductRequest true "Product creation details"
+// @Success 201 {object} dto.ProductResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /products [post]
+// @Security BearerAuth
 func (h *ProductHandler) CreateProduct(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -98,6 +135,21 @@ func (h *ProductHandler) CreateProduct(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
+// UpdateProduct godoc
+// @Summary Update product
+// @Description Update an existing product's information
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Param request body dto.UpdateProductRequest true "Product update details"
+// @Success 200 {object} dto.ProductResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 404 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /products/{id} [put]
+// @Security BearerAuth
 func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 	// Parse product ID
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -136,6 +188,20 @@ func (h *ProductHandler) UpdateProduct(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// CheckInventory godoc
+// @Summary Check product inventory
+// @Description Get the current inventory level for a specific product
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} dto.InventoryResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 404 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /products/{id}/inventory [get]
+// @Security BearerAuth
 func (h *ProductHandler) CheckInventory(c echo.Context) error {
 	// Parse product ID
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)

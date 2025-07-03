@@ -12,7 +12,9 @@ import (
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/redis"
 	"github.com/Ahmed1monm/backend-golang-task-2025/pkg/websocket"
 	"github.com/labstack/echo/v4"
+	"github.com/swaggo/echo-swagger"
 	"gorm.io/gorm"
+	_ "github.com/Ahmed1monm/backend-golang-task-2025/docs" // This is required for swagger
 )
 
 // SetupRoutes configures all API routes
@@ -48,6 +50,9 @@ func SetupRoutes(e *echo.Echo, db *gorm.DB, redisService redis.Service) {
 	orderHandler := handlers.NewOrderHandler(orderService)
 	adminHandler := handlers.NewAdminHandler(orderService, reportService)
 	wsHandler := handlers.NewWebSocketHandler(wsManager)
+
+	// Swagger route
+	e.GET("/api/docs/*", echoSwagger.WrapHandler)
 
 	// API v1 group
 	v1 := e.Group("/api/v1")

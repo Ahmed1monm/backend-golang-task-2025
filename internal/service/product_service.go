@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/api/dto"
 	"github.com/Ahmed1monm/backend-golang-task-2025/internal/models"
@@ -13,9 +12,9 @@ import (
 )
 
 type ProductService interface {
-	CreateProduct(ctx context.Context, req *dto.CreateProductRequest) (*dto.CreateProductResponse, error)
+	CreateProduct(ctx context.Context, req *dto.CreateProductRequest) (*dto.ProductResponse, error)
 	GetProduct(ctx context.Context, id uint) (*dto.ProductResponse, error)
-	ListProducts(ctx context.Context, page, limit int) (*dto.ListProductsResponse, error)
+	ListProducts(ctx context.Context, page, limit int) (*dto.PaginatedProductsResponse, error)
 	GetInventory(ctx context.Context, productID uint) (*dto.InventoryResponse, error)
 	UpdateProduct(ctx context.Context, id uint, req *dto.UpdateProductRequest) (*dto.ProductResponse, error)
 }
@@ -43,13 +42,12 @@ func (s *productService) GetProduct(ctx context.Context, id uint) (*dto.ProductR
 		Name:        product.Name,
 		Description: product.Description,
 		Price:       product.Price,
-		Quantity:    product.Quantity,
-		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   product.UpdatedAt.Format(time.RFC3339),
+		SKU:         product.SKU,
+		StockLevel:  product.Quantity,
 	}, nil
 }
 
-func (s *productService) ListProducts(ctx context.Context, page, limit int) (*dto.ListProductsResponse, error) {
+func (s *productService) ListProducts(ctx context.Context, page, limit int) (*dto.PaginatedProductsResponse, error) {
 	offset := (page - 1) * limit
 
 	products, total, err := s.productRepo.List(ctx, offset, limit)
@@ -65,13 +63,12 @@ func (s *productService) ListProducts(ctx context.Context, page, limit int) (*dt
 			Name:        product.Name,
 			Description: product.Description,
 			Price:       product.Price,
-			Quantity:    product.Quantity,
-			CreatedAt:   product.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:   product.UpdatedAt.Format(time.RFC3339),
+			SKU:         product.SKU,
+			StockLevel:  product.Quantity,
 		}
 	}
 
-	return &dto.ListProductsResponse{
+	return &dto.PaginatedProductsResponse{
 		Products: responseProducts,
 		Total:    total,
 		Page:     page,
@@ -109,14 +106,21 @@ func (s *productService) GetInventory(ctx context.Context, productID uint) (*dto
 		return nil, nil
 	}
 
-	return &dto.InventoryResponse{
-		ProductID: inventory.ProductID,
-		Quantity:  inventory.Quantity,
-		Reserved:  inventory.Reserved,
+	productInfo, err := s.productRepo.FindByID(ctx, inventory.ProductID)
+	if err != nil {
+		logger.Error(ctx, "Failed to get product for inventory", zap.Error(err))
+		return nil, err
+}
+
+return &dto.InventoryResponse{
+		ProductID:    inventory.ProductID,
+		SKU:          productInfo.SKU,
+		StockLevel:   inventory.Quantity,
+		MinimumStock: inventory.MinimumStock,
 	}, nil
 }
 
-func (s *productService) CreateProduct(ctx context.Context, req *dto.CreateProductRequest) (*dto.CreateProductResponse, error) {
+func (s *productService) CreateProduct(ctx context.Context, req *dto.CreateProductRequest) (*dto.ProductResponse, error) {
 	// Create product model
 	product := &models.Product{
 		Name:        req.Name,
@@ -135,13 +139,13 @@ func (s *productService) CreateProduct(ctx context.Context, req *dto.CreateProdu
 		return nil, err
 	}
 
-	return &dto.CreateProductResponse{
+	return &dto.ProductResponse{
 		ID:          product.ID,
 		Name:        product.Name,
 		Description: product.Description,
 		Price:       product.Price,
-		Quantity:    inventory.Quantity,
-		CreatedAt:   product.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		SKU:         product.SKU,
+		StockLevel:  inventory.Quantity,
 	}, nil
 }
 
@@ -208,8 +212,7 @@ func (s *productService) UpdateProduct(ctx context.Context, id uint, req *dto.Up
 		Name:        existingProduct.Name,
 		Description: existingProduct.Description,
 		Price:       existingProduct.Price,
-		Quantity:    updatedInventory.Quantity,
-		CreatedAt:   existingProduct.CreatedAt.Format(time.RFC3339),
-		UpdatedAt:   existingProduct.UpdatedAt.Format(time.RFC3339),
+		SKU:         existingProduct.SKU,
+		StockLevel:  updatedInventory.Quantity,
 	}, nil
 }

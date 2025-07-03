@@ -18,6 +18,18 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
+// CreateUser godoc
+// @Summary Create a new user
+// @Description Register a new user in the system
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateUserRequest true "User registration details"
+// @Success 201 {object} dto.UserProfileResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 409 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /users [post]
 func (h *UserHandler) CreateUser(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -44,6 +56,18 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	return c.JSON(http.StatusCreated, resp)
 }
 
+// GetUserProfile godoc
+// @Summary Get user profile
+// @Description Get a user's profile information by ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {object} dto.UserProfileResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 404 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /users/{id} [get]
 func (h *UserHandler) GetUserProfile(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -74,12 +98,10 @@ func (h *UserHandler) GetUserProfile(c echo.Context) error {
 // @Param id path int true "User ID"
 // @Param request body dto.UpdateUserProfileRequest true "Update profile request"
 // @Success 200 {object} dto.UserProfileResponse
-// @Failure 400 {object} errors.ErrorResponse
-// @Failure 401 {object} errors.ErrorResponse
-// @Failure 403 {object} errors.ErrorResponse
-// @Failure 404 {object} errors.ErrorResponse
-// @Failure 409 {object} errors.ErrorResponse
-// @Failure 500 {object} errors.ErrorResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
 // @Router /users/{id} [put]
 // @Security BearerAuth
 func (h *UserHandler) UpdateUserProfile(c echo.Context) error {

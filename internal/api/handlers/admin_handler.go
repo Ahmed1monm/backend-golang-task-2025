@@ -33,9 +33,9 @@ func NewAdminHandler(orderService *service.OrderService, reportService *service.
 // @Param page query int false "Page number (default: 1)"
 // @Param per_page query int false "Items per page (default: 10)"
 // @Success 200 {object} dto.PaginatedOrdersResponse
-// @Failure 401 {object} errors.ErrorResponse
-// @Failure 403 {object} errors.ErrorResponse
-// @Failure 500 {object} errors.ErrorResponse
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
 // @Router /admin/orders [get]
 // @Security BearerAuth
 func (h *AdminHandler) ListAllOrders(c echo.Context) error {
@@ -85,6 +85,21 @@ func (h *AdminHandler) ListAllOrders(c echo.Context) error {
 	})
 }
 
+// UpdateOrderStatus godoc
+// @Summary Update order status (admin only)
+// @Description Update the status of an order in the system
+// @Tags admin,orders
+// @Accept json
+// @Produce json
+// @Param id path int true "Order ID"
+// @Param request body dto.UpdateOrderStatusRequest true "New order status"
+// @Success 200 {object} dto.AdminOrderResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /admin/orders/{id}/status [put]
+// @Security BearerAuth
 func (h *AdminHandler) UpdateOrderStatus(c echo.Context) error {
 	// Parse order ID
 	orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
@@ -143,8 +158,8 @@ func (h *AdminHandler) UpdateOrderStatus(c echo.Context) error {
 // @Tags admin,reports
 // @Accept json
 // @Produce json
-// @Success 200 {object} models.DailySalesReport
-// @Failure 500 {object} errors.ErrorResponse
+// @Success 200 {object} dto.DailySalesReportResponse
+// @Failure 500 {object} errors.AppError
 // @Router /admin/reports/daily [get]
 // @Security BearerAuth
 func (h *AdminHandler) GetDailySalesReport(c echo.Context) error {
@@ -160,6 +175,19 @@ func (h *AdminHandler) GetDailySalesReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, report)
 }
 
+// GetLowStockAlerts godoc
+// @Summary Get low stock alerts (admin only)
+// @Description Get a list of products with low stock levels that require attention
+// @Tags admin,inventory
+// @Accept json
+// @Produce json
+// @Success 200 {array} dto.LowStockAlertResponse
+// @Failure 404 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 403 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /admin/inventory/low-stock [get]
+// @Security BearerAuth
 func (h *AdminHandler) GetLowStockAlerts(c echo.Context) error {
 	return errors.NewBusinessError("No low stock items found", "NO_LOW_STOCK", http.StatusNotFound)
 }

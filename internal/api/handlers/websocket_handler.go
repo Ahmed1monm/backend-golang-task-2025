@@ -27,7 +27,18 @@ var upgrader = gorillaws.Upgrader{
 	},
 }
 
-// HandleWebSocket upgrades HTTP connection to WebSocket
+// HandleWebSocket godoc
+// @Summary Connect to WebSocket
+// @Description Upgrade HTTP connection to WebSocket for real-time updates
+// @Tags websocket
+// @Accept json
+// @Produce json
+// @Success 101 {string} string "Switching Protocols"
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Failure 500 {object} errors.AppError
+// @Router /ws [get]
+// @Security BearerAuth
 func (h *WebSocketHandler) HandleWebSocket(c echo.Context) error {
 	// Get user ID from JWT token
 	userID := c.Get("user_id").(uint)

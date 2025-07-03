@@ -9,5 +9,6 @@ type Inventory struct {
 	ProductID    uint    `gorm:"uniqueIndex;not null"`
 	Product      *Product `gorm:"foreignKey:ProductID"`
 	Quantity     int     `gorm:"not null"`
-	Reserved     int     `gorm:"not null;default:0"`  // Quantity reserved for pending orders
+	Reserved     int     `gorm:"not null;default:0"`     // Quantity reserved for pending orders
+	MinimumStock int     `gorm:"not null;default:10"`  // Minimum stock level before alerts
 }

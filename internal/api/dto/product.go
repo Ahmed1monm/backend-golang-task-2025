@@ -22,24 +22,27 @@ type UpdateProductRequest struct {
 }
 
 // ProductResponse represents a product in responses
+// ProductResponse represents a product in responses
 type ProductResponse struct {
 	ID          uint    `json:"id"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price"`
-	Quantity    int     `json:"quantity"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	SKU         string  `json:"sku"`
+	StockLevel  int     `json:"stock_level"`
 }
 
+// InventoryResponse represents the current inventory level of a product
 type InventoryResponse struct {
-	ProductID uint `json:"product_id"`
-	Quantity  int  `json:"quantity"`
-	Reserved  int  `json:"reserved"`
+	ProductID     uint   `json:"product_id"`
+	SKU           string `json:"sku"`
+	StockLevel    int    `json:"stock_level"`
+	MinimumStock  int    `json:"minimum_stock"`
 }
 
 // ListProductsResponse represents the response for listing products
-type ListProductsResponse struct {
+// PaginatedProductsResponse represents a paginated list of products
+type PaginatedProductsResponse struct {
 	Products []ProductResponse `json:"products"`
 	Total    int64            `json:"total"`
 	Page     int              `json:"page"`

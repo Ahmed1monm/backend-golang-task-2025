@@ -1,0 +1,978 @@
+definitions:
+  dto.AdminOrderResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemResponse'
+        type: array
+      status:
+        type: string
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  dto.CreateOrderItemRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  dto.CreateOrderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.CreateOrderItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  dto.CreateProductRequest:
+    properties:
+      description:
+        maxLength: 1000
+        minLength: 10
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      price:
+        type: number
+      quantity:
+        minimum: 0
+        type: integer
+    required:
+    - description
+    - name
+    - price
+    - quantity
+    type: object
+  dto.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      password:
+        maxLength: 100
+        minLength: 8
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  dto.DailySalesReportResponse:
+    properties:
+      average_order_value:
+        type: number
+      cancellation_rate:
+        type: number
+      cancelled_orders:
+        type: integer
+      date:
+        type: string
+      delivered_orders:
+        type: integer
+      id:
+        type: integer
+      low_stock_products:
+        items:
+          $ref: '#/definitions/dto.LowStockAlert'
+        type: array
+      new_customers:
+        type: integer
+      order_fulfillment_rate:
+        type: number
+      pending_orders:
+        type: integer
+      processing_orders:
+        type: integer
+      shipped_orders:
+        type: integer
+      top_products:
+        items:
+          $ref: '#/definitions/dto.TopProductDTO'
+        type: array
+      total_orders:
+        type: integer
+      total_revenue:
+        type: number
+      unique_customers:
+        type: integer
+    type: object
+  dto.InventoryResponse:
+    properties:
+      minimum_stock:
+        type: integer
+      product_id:
+        type: integer
+      sku:
+        type: string
+      stock_level:
+        type: integer
+    type: object
+  dto.LowStockAlert:
+    properties:
+      current_stock:
+        type: integer
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      reorder_point:
+        type: integer
+      reserved_stock:
+        type: integer
+    type: object
+  dto.LowStockAlertResponse:
+    properties:
+      minimum_stock:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: integer
+      sku:
+        type: string
+      stock_level:
+        type: integer
+    type: object
+  dto.OrderItemResponse:
+    properties:
+      id:
+        type: integer
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  dto.OrderResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemResponse'
+        type: array
+      status:
+        type: string
+      total_amount:
+        type: number
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  dto.PaginatedOrdersResponse:
+    properties:
+      orders:
+        items:
+          $ref: '#/definitions/dto.OrderResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  dto.PaginatedProductsResponse:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      products:
+        items:
+          $ref: '#/definitions/dto.ProductResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  dto.ProductResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      sku:
+        type: string
+      stock_level:
+        type: integer
+    type: object
+  dto.TopProductDTO:
+    properties:
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      quantity_sold:
+        type: integer
+      revenue:
+        type: number
+      stock_turnover:
+        type: number
+    type: object
+  dto.UpdateOrderStatusRequest:
+    properties:
+      status:
+        enum:
+        - pending
+        - processing
+        - shipped
+        - delivered
+        - cancelled
+        type: string
+    required:
+    - status
+    type: object
+  dto.UpdateProductRequest:
+    properties:
+      description:
+        maxLength: 1000
+        minLength: 10
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      price:
+        type: number
+      quantity:
+        minimum: 0
+        type: integer
+    type: object
+  dto.UpdateUserProfileRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      last_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      password:
+        maxLength: 100
+        minLength: 8
+        type: string
+    type: object
+  dto.UserProfileResponse:
+    properties:
+      active:
+        type: boolean
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+    type: object
+  errors.AppError:
+    properties:
+      error_code:
+        type: string
+      message:
+        type: string
+      status_code:
+        type: integer
+    type: object
+  models.UserRole:
+    enum:
+    - admin
+    - customer
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleCustomer
+info:
+  contact: {}
+paths:
+  /admin/inventory/low-stock:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of products with low stock levels that require attention
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.LowStockAlertResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Get low stock alerts (admin only)
+      tags:
+      - admin
+      - inventory
+  /admin/orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of all orders in the system
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 10)'
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaginatedOrdersResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: List all orders (admin only)
+      tags:
+      - admin
+      - orders
+  /admin/orders/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Update the status of an order in the system
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New order status
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AdminOrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Update order status (admin only)
+      tags:
+      - admin
+      - orders
+  /admin/reports/daily:
+    get:
+      consumes:
+      - application/json
+      description: Get the daily sales report for today. Returns an empty report if
+        not yet generated.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DailySalesReportResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Get today's sales report
+      tags:
+      - admin
+      - reports
+  /orders:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all orders for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.OrderResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: List user's orders
+      tags:
+      - orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order with the specified items
+      parameters:
+      - description: Order creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Create a new order
+      tags:
+      - orders
+  /orders/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Get order by ID
+      tags:
+      - orders
+  /orders/{id}/cancel:
+    put:
+      consumes:
+      - application/json
+      description: Cancel an order if it's in a cancellable state and belongs to the
+        authenticated user
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Cancel an order
+      tags:
+      - orders
+  /orders/{id}/status:
+    get:
+      consumes:
+      - application/json
+      description: Get the current status of an order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Get order status
+      tags:
+      - orders
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of products
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 10)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaginatedProductsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      summary: List all products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product in the system
+      parameters:
+      - description: Product creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Create a new product
+      tags:
+      - products
+  /products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      summary: Get product by ID
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product's information
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProductResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Update product
+      tags:
+      - products
+  /products/{id}/inventory:
+    get:
+      consumes:
+      - application/json
+      description: Get the current inventory level for a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.InventoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Check product inventory
+      tags:
+      - products
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user in the system
+      parameters:
+      - description: User registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      summary: Create a new user
+      tags:
+      - users
+  /users/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a user's profile information by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      summary: Get user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update authenticated user's profile information
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update profile request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - users
+  /ws:
+    get:
+      consumes:
+      - application/json
+      description: Upgrade HTTP connection to WebSocket for real-time updates
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/errors.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/errors.AppError'
+      security:
+      - BearerAuth: []
+      summary: Connect to WebSocket
+      tags:
+      - websocket
+swagger: "2.0"
